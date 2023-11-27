@@ -513,5 +513,16 @@ function xmldb_enrol_lti_upgrade($oldversion) {
     // Automatically generated Moodle v4.3.0 release upgrade line.
     // Put any upgrade step following this.
 
+    if ($oldversion < 2023101700) {
+        $table = new xmldb_table('enrol_lti_tools');
+        $field = new xmldb_field('groupid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'rolelearner');
+
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_plugin_savepoint(true, 2023101700, 'enrol', 'lti');
+    }
+
     return true;
 }

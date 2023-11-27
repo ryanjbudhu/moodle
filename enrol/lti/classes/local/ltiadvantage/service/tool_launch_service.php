@@ -311,6 +311,7 @@ class tool_launch_service {
      * @throws \moodle_exception if launch problems are encountered.
      */
     public function user_launches_tool(\stdClass $user, LtiMessageLaunch $launch): array {
+        global $CFG;
 
         $launchdata = $this->get_launch_data($launch);
 
@@ -379,6 +380,12 @@ class tool_launch_service {
         // Give the user the role in the given context.
         $roleid = $isinstructor ? $resource->roleinstructor : $resource->rolelearner;
         role_assign($roleid, $ltiuser->get_localid(), $resource->contextid);
+
+        // Add the user to the requested group.
+        if ($resource->groupid) {
+            require_once($CFG->dirroot . '/group/lib.php');
+            groups_add_member($resource->groupid, $user->id, 'enrol_lti', $resource->id);
+        }
 
         return [$ltiuser->get_localid(), $resource];
     }
