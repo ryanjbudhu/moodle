@@ -267,12 +267,13 @@ abstract class lti_advantage_testcase extends \advanced_testcase {
      * @param int $enrolstartdate the unix time when the enrolment starts, or 0 for no start time.
      * @param int $provisioningmodeinstructor the teacher provisioning mode for all created resources, 0 for default (prompt).
      * @param int $provisioningmodelearner the student provisioning mode for all created resources, 0 for default (auto).
+     * @param int $groupid the course group ID that users will be added to on launch, 0 for default (none), -1 for new group.
      * @return array array of objects for use in individual tests; courses, tools.
      */
     protected function create_test_environment(bool $enableauthplugin = true, bool $enableenrolplugin = true,
             bool $membersync = true, int $membersyncmode = helper::MEMBER_SYNC_ENROL_AND_UNENROL,
             bool $gradesync = true, bool $gradesynccompletion = false, int $enrolstartdate = 0, int $provisioningmodeinstructor = 0,
-            int $provisioningmodelearner = 0): array {
+            int $provisioningmodelearner = 0, int $groupid = 0): array {
 
         global $CFG;
         require_once($CFG->libdir . '/completionlib.php');
@@ -317,7 +318,8 @@ abstract class lti_advantage_testcase extends \advanced_testcase {
             'ltiversion' => 'LTI-1p3',
             'enrolstartdate' => $enrolstartdate,
             'provisioningmodeinstructor' => $provisioningmodeinstructor ?: auth_plugin_lti::PROVISIONING_MODE_PROMPT_NEW_EXISTING,
-            'provisioningmodelearner' => $provisioningmodelearner ?: auth_plugin_lti::PROVISIONING_MODE_AUTO_ONLY
+            'provisioningmodelearner' => $provisioningmodelearner ?: auth_plugin_lti::PROVISIONING_MODE_AUTO_ONLY,
+            'groupid' => $groupid,
         ];
         $tool = $generator->create_lti_tool((object)$tooldata);
         $tool = helper::get_lti_tool($tool->id);
@@ -335,7 +337,8 @@ abstract class lti_advantage_testcase extends \advanced_testcase {
             'ltiversion' => 'LTI-1p3',
             'enrolstartdate' => $enrolstartdate,
             'provisioningmodeinstructor' => $provisioningmodeinstructor ?: auth_plugin_lti::PROVISIONING_MODE_PROMPT_NEW_EXISTING,
-            'provisioningmodelearner' => $provisioningmodelearner ?: auth_plugin_lti::PROVISIONING_MODE_AUTO_ONLY
+            'provisioningmodelearner' => $provisioningmodelearner ?: auth_plugin_lti::PROVISIONING_MODE_AUTO_ONLY,
+            'groupid' => $groupid,
         ];
         $tool2 = $generator->create_lti_tool((object)$tooldata);
         $tool2 = helper::get_lti_tool($tool2->id);
@@ -350,7 +353,8 @@ abstract class lti_advantage_testcase extends \advanced_testcase {
             'ltiversion' => 'LTI-1p3',
             'enrolstartdate' => $enrolstartdate,
             'provisioningmodeinstructor' => $provisioningmodeinstructor ?: auth_plugin_lti::PROVISIONING_MODE_PROMPT_NEW_EXISTING,
-            'provisioningmodelearner' => $provisioningmodelearner ?: auth_plugin_lti::PROVISIONING_MODE_AUTO_ONLY
+            'provisioningmodelearner' => $provisioningmodelearner ?: auth_plugin_lti::PROVISIONING_MODE_AUTO_ONLY,
+            'groupid' => $groupid,
         ];
         $tool3 = $generator->create_lti_tool((object)$tooldata);
         $tool3 = helper::get_lti_tool($tool3->id);

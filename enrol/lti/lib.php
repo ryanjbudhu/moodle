@@ -29,6 +29,11 @@ use IMSGlobal\LTI\ToolProvider\ToolConsumer;
 defined('MOODLE_INTERNAL') || die();
 
 /**
+ * ENROL_LTI_CREATE_GROUP constant for automatically creating a group for an LTI enrolment.
+ */
+define('ENROL_LTI_CREATE_GROUP', -1);
+
+/**
  * LTI enrolment plugin class.
  *
  * @package enrol_lti
@@ -90,6 +95,40 @@ class enrol_lti_plugin extends enrol_plugin {
     }
 
     /**
+     * Create a new group with the instance's name.
+     *
+     * @param int $courseid The current course ID.
+     * @param null|string $ltiname The name of this LTI instance, if null or empty defaults to "LTI".
+     * @return int The new group ID for this cohort.
+     */
+    protected function create_new_group(int $courseid, ?string $ltiname): int {
+        global $DB, $CFG;
+
+        require_once($CFG->dirroot.'/group/lib.php');
+
+        if (!$ltiname) {
+            $ltiname = 'LTI';
+        }
+
+        $a = new stdClass();
+        $a->name = $ltiname;
+        $a->increment = '';
+        $inc = 1;
+        $groupname = trim(get_string('defaultgroupnametext', 'enrol_lti', $a));
+        // Check to see if the group name already exists in this course.
+        // and an incremented number if it does.
+        while ($DB->record_exists('groups', ['name' => $groupname, 'courseid' => $courseid])) {
+            $a->increment = '(' . (++$inc) . ')';
+            $groupname = trim(get_string('defaultgroupnametext', 'enrol_lti', $a));
+        }
+        // Create a new group for the course meta sync.
+        $groupdata = new stdClass();
+        $groupdata->courseid = $courseid;
+        $groupdata->name = $groupname;
+        return groups_create_group($groupdata);
+    }
+
+    /**
      * Add new instance of enrol plugin.
      *
      * @param object $course
@@ -98,6 +137,14 @@ class enrol_lti_plugin extends enrol_plugin {
      */
     public function add_instance($course, array $fields = null) {
         global $DB;
+
+        if (!empty($fields['groupid']) && $fields['groupid'] == ENROL_LTI_CREATE_GROUP) {
+            require_capability(
+                'moodle/course:managegroups',
+                \core\context\course::instance($course->id)
+            );
+            $fields['groupid'] = $this->create_new_group($course->id, $fields['name']);
+        }
 
         $instanceid = parent::add_instance($course, $fields);
 
@@ -129,6 +176,14 @@ class enrol_lti_plugin extends enrol_plugin {
      */
     public function update_instance($instance, $data) {
         global $DB;
+
+        if (!empty($data->groupid) && $data->groupid == ENROL_LTI_CREATE_GROUP) {
+            require_capability(
+                'moodle/course:managegroups',
+                core\context\course::instance($instance->courseid)
+            );
+            $data->groupid = $this->create_new_group($instance->courseid, $data->name);
+        }
 
         parent::update_instance($instance, $data);
 
@@ -218,6 +273,40 @@ class enrol_lti_plugin extends enrol_plugin {
     }
 
     /**
+     * Return an array of valid options for the groups.
+     *
+     * @param context $coursecontext
+     * @return array The array of available groups, from group ID to formatted group name.
+     *               Includes ID of 0 for no group, and possibly -1 for create a new group
+     *               (dependent on user capabilities). -1 is never stored in the DB.
+     */
+    protected function get_group_options(context $coursecontext): array {
+        global $COURSE, $USER;
+
+        $groups = [0 => get_string('none')];
+        $courseid = $coursecontext->instanceid;
+        // Add -1 option if this user has permission to create groups.
+        if (has_capability('moodle/course:managegroups', $coursecontext)) {
+            $groups[ENROL_LTI_CREATE_GROUP] = get_string('creategroup', 'enrol_lti');
+        }
+
+        // Check if user can see all groups, otherwise only show the users own groups.
+        $aag = has_capability('moodle/site:accessallgroups', $coursecontext);
+        if ($COURSE->groupmode == VISIBLEGROUPS || $aag) {
+            $realgroups = groups_get_all_groups($courseid);
+        } else {
+            $realgroups = groups_get_all_groups($courseid, $USER->id);
+        }
+
+        // Format each group name for display.
+        foreach ($realgroups as $group) {
+            $groups[$group->id] = format_string($group->name, true, ['context' => $coursecontext]);
+        }
+
+        return $groups;
+    }
+
+    /**
      * Add elements to the edit instance form.
      *
      * @param stdClass $instance
@@ -284,6 +373,10 @@ class enrol_lti_plugin extends enrol_plugin {
         $mform->addElement('select', 'rolelearner', get_string('rolelearner', 'enrol_lti'), $assignableroles);
         $mform->setDefault('rolelearner', '5');
         $mform->addHelpButton('rolelearner', 'rolelearner', 'enrol_lti');
+
+        $groups = $this->get_group_options($context);
+        $mform->addElement('select', 'groupid', get_string('addgroup', 'enrol_lti'), $groups);
+        $mform->addHelpButton('groupid', 'addgroup', 'enrol_lti');
 
         if (!$legacy) {
             global $CFG;
@@ -427,6 +520,13 @@ class enrol_lti_plugin extends enrol_plugin {
             if (!$completion->is_enabled($cm)) {
                 $errors['requirecompletion'] = get_string('errorcompletionenabled', 'enrol_lti');
             }
+        }
+
+        if (!empty($data['groupid'])) {
+            $validgroups = array_keys($this->get_group_options($context));
+            $tovalidate = ['groupid' => $validgroups];
+            $typeerrors = $this->validate_param_types($data, $tovalidate);
+            $errors = array_merge($errors, $typeerrors);
         }
 
         return $errors;

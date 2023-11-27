@@ -825,4 +825,33 @@ class tool_launch_service_test extends \lti_advantage_testcase {
             ],
         ];
     }
+
+    /**
+     * Test the launch when a module assigns users to groups.
+     *
+     * @covers ::user_launches_tool
+     */
+    public function test_user_launches_tool_add_to_group() {
+        $this->resetAfterTest();
+        [$course, $modresource] = $this->create_test_environment();
+        // Create a new group for the course meta sync.
+        $groupdata = new \stdClass();
+        $groupdata->courseid = $course->id;
+        $groupdata->name = 'Test LTI Group';
+        $newgroupid = groups_create_group($groupdata);
+
+        // Update the tool to assign users to that group.
+        global $DB;
+        $modresource->groupid = $newgroupid;
+        $DB->update_record('enrol_lti_tools', $modresource);
+
+        $launchservice = $this->get_tool_launch_service();
+        $instructoruser = $this->getDataGenerator()->create_user();
+        $mockinstructoruser = $this->get_mock_launch_users_with_ids(['1'])[0];
+
+        // Launch and confirm the group assignment.
+        $mockinstructorlaunch = $this->get_mock_launch($modresource, $mockinstructoruser);
+        [$instructorid] = $launchservice->user_launches_tool($instructoruser, $mockinstructorlaunch);
+        $this->assertContains((int)$newgroupid, array_keys(groups_get_all_groups($course->id, $instructorid, 0, 'g.id')));
+    }
 }

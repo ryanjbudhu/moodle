@@ -197,3 +197,8 @@ $string['userdefaultvalues'] = 'User default values';
 $string['viewplatformdetails'] = 'View platform details';
 $string['viewtoolendpoints'] = 'View tool endpoints';
 $string['cartridgeurl'] = 'Cartridge URL';
+
+$string['addgroup'] = 'Add to group';
+$string['addgroup_help'] = 'Add users to the selected group, or automatically create a new group for all users that use this LTI configuration.';
+$string['creategroup'] = 'Create new group';
+$string['defaultgroupnametext'] = '{$a->name} enrolment {$a->increment}';
