@@ -187,9 +187,9 @@ class published_resource_repository_test extends \advanced_testcase {
         $resources = $resourcerepo->find_all_for_user($modaccessonlyuser->id);
         $this->assertCount(4, $resources);
 
-        // Check other course level roles without the capability, e.g. 'teacher'.
+        // Check other course level roles without the capability, e.g. 'student'.
         role_unassign($editingteacherrole->id, $modaccessonlyuser->id, \context_course::instance($course->id)->id);
-        $this->getDataGenerator()->enrol_user($modaccessonlyuser->id, $course->id, 'teacher');
+        $this->getDataGenerator()->enrol_user($modaccessonlyuser->id, $course->id, 'student');
         $resources = $resourcerepo->find_all_for_user($modaccessonlyuser->id);
         $this->assertCount(0, $resources);
     }

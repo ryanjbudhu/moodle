@@ -113,6 +113,7 @@ $string['noregisteredplatforms'] = 'No registered platforms';
 $string['launchdetails'] = 'Launch details';
 $string['launchdetails_help'] = 'A cartridge URL (also called configuration URL) plus secret or a launch URL are required for configuring the tool.';
 $string['launchurl'] = 'Launch URL';
+$string['lti:consume'] = 'View published tool resources';
 $string['lti:config'] = 'Configure \'Publish as LTI tool\' instances';
 $string['lti:unenrol'] = 'Unenrol users from the course';
 $string['opensslconfiginvalid'] = 'LTI 1.3 requires a valid openssl.cnf to be configured and available to your web server. Please contact the site administrator to configure and enable openssl for this site.';
