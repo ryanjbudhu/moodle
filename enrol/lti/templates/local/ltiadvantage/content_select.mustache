@@ -38,23 +38,28 @@
         "action": "https://example.com/enrol/lti/configure.php",
         "launchid": "123-456-789",
         "sesskey": "123456789",
-        "courses": [
+        "resources": [
             {
-                "id": 24,
-                "fullname": "Introduction to chemistry",
-                "shared_course": false,
-                "modules": [
+                "name": "My published tool"
+                "courses": [
                     {
-                        "id": 45,
-                        "name": "Quiz 1",
-                        "lineitem": true
+                        "id": 24,
+                        "fullname": "Introduction to chemistry",
+                        "shared_course": false,
+                        "modules": [
+                            {
+                                "id": 45,
+                                "name": "Quiz 1",
+                                "lineitem": true
+                            }
+                        ]
+                    },
+                    {
+                        "id": 67,
+                        "fullname": "Programming 101",
+                        "shared_course": true
                     }
                 ]
-            },
-            {
-                "id": 67,
-                "fullname": "Programming 101",
-                "shared_course": true
             }
         ]
     }
@@ -79,35 +84,42 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {{#courses}}
-                        <tr>
-                            <td>
-                                {{fullname}}
-                            </td>
-                            <td>
-                                {{#shared_course}}
-                                    <input type="checkbox" name="modules[]" value="{{id}}">
-                                {{/shared_course}}
-                            </td>
-                            <td>
-                                {{#shared_course}}
-                                    <input type="checkbox" name="grades[]" value="{{id}}">
-                                {{/shared_course}}
-                            </td>
-                        </tr>
-                        {{#modules}}
-                            <tr>
+                    {{#resources}}
+                            <tr style="border-top: gray solid 2px;">
                                 <td>{{name}}</td>
-                                <td><input type="checkbox" name="modules[]" value="{{id}}"></td>
-                                {{#lineitem}}
-                                <td><input type="checkbox" name="grades[]" value="{{id}}"></td>
-                                {{/lineitem}}
-                                {{^lineitem}}
-                                <td>-</td>
-                                {{/lineitem}}
+                                <td></td>
+                                <td></td>
                             </tr>
-                        {{/modules}}
-                    {{/courses}}
+                        {{#courses}}
+                            <tr>
+                                <td>
+                                    {{fullname}}
+                                </td>
+                                <td>
+                                    {{#shared_course}}
+                                        <input type="checkbox" name="modules[]" value="{{id}}">
+                                    {{/shared_course}}
+                                </td>
+                                <td>
+                                    {{#shared_course}}
+                                        <input type="checkbox" name="grades[]" value="{{id}}">
+                                    {{/shared_course}}
+                                </td>
+                            </tr>
+                            {{#modules}}
+                                <tr>
+                                    <td>{{name}}</td>
+                                    <td><input type="checkbox" name="modules[]" value="{{id}}"></td>
+                                    {{#lineitem}}
+                                    <td><input type="checkbox" name="grades[]" value="{{id}}"></td>
+                                    {{/lineitem}}
+                                    {{^lineitem}}
+                                    <td>-</td>
+                                    {{/lineitem}}
+                                </tr>
+                            {{/modules}}
+                        {{/courses}}
+                    {{/resources}}
                 </tbody>
             </table>
             <input type="submit" class="btn btn-primary" value="{{#str}}addcontent, enrol_lti{{/str}}">

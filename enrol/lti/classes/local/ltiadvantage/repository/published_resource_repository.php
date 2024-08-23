@@ -46,6 +46,8 @@ class published_resource_repository {
                 $record->supportsgrades,
                 $record->grademax ?? null,
                 $record->iscourse,
+                $record->enrolid,
+                $record->enrolname,
             );
             $publishedresources[] = $publishedresource;
         }

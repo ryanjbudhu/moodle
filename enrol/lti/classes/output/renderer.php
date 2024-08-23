@@ -69,26 +69,33 @@ class renderer extends plugin_renderer_base {
             'launchid' => $launch->getLaunchId(),
             'hascontent' => !empty($resources),
             'sesskey' => sesskey(),
-            'courses' => []
+            'resources' => []
         ];
         foreach ($resources as $resource) {
-            $context['courses'][$resource->get_courseid()]['fullname'] = $resource->get_coursefullname();
+            $context['resources'][$resource->get_enrol_id()]['id'] = $resource->get_enrol_id();
+            $context['resources'][$resource->get_enrol_id()]['name'] = $resource->get_enrol_name();
+            $resourcecontext = &$context['resources'][$resource->get_enrol_id()];
+            $resourcecontext['courses'][$resource->get_courseid()]['fullname'] = $resource->get_coursefullname();
             if (!$resource->is_course()) {
-                $context['courses'][$resource->get_courseid()]['modules'][] = [
+                $resourcecontext['courses'][$resource->get_courseid()]['modules'][] = [
                     'name' => $resource->get_name(),
                     'id' => $resource->get_id(),
                     'lineitem' => $resource->supports_grades()
                 ];
-                if (empty($context['courses'][$resource->get_courseid()]['shared_course'])) {
-                    $context['courses'][$resource->get_courseid()]['shared_course'] = false;
+                if (empty($resourcecontext['courses'][$resource->get_courseid()]['shared_course'])) {
+                    $resourcecontext['courses'][$resource->get_courseid()]['shared_course'] = false;
                 }
             } else {
-                $context['courses'][$resource->get_courseid()]['shared_course'] = $resource->is_course();
-                $context['courses'][$resource->get_courseid()]['id'] = $resource->get_id();
-                $context['courses'][$resource->get_courseid()]['lineitem'] = $resource->supports_grades();
+                $resourcecontext['courses'][$resource->get_courseid()]['shared_course'] = $resource->is_course();
+                $resourcecontext['courses'][$resource->get_courseid()]['id'] = $resource->get_id();
+                $resourcecontext['courses'][$resource->get_courseid()]['lineitem'] = $resource->supports_grades();
             }
         }
-        $context['courses'] = array_values($context['courses']); // Reset keys for use in the template.
+        $context['resources'] = array_values($context['resources']); // Reset keys for use in the template.
+        foreach($context['resources'] as &$resource) {
+            $resource['courses'] = array_values($resource['courses']); // Reset keys for use in the template.
+        }
+        unset($resource);
         return parent::render_from_template('enrol_lti/local/ltiadvantage/content_select', $context);
     }
 

@@ -41,7 +41,9 @@ class published_resource_test extends \advanced_testcase {
             'uuid-123-abc',
             true,
             110.50,
-            false
+            false,
+            1,
+            'Published Resource 1'
         );
         $this->assertEquals('Assignment one', $pr->get_name());
         $this->assertEquals('Course 1', $pr->get_coursefullname());
@@ -52,5 +54,7 @@ class published_resource_test extends \advanced_testcase {
         $this->assertEquals(true, $pr->supports_grades());
         $this->assertEquals(110.50, $pr->get_grademax());
         $this->assertEquals(false, $pr->is_course());
+        $this->assertEquals(1, $pr->get_enrol_id());
+        $this->assertEquals('Published Resource 1', $pr->get_enrol_name());
     }
 }

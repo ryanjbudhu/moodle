@@ -54,6 +54,12 @@ class published_resource {
     /** @var bool whether or not this resource is itself a course. */
     private $iscourse;
 
+    /** @var int the id of the enrol instance that published this resource. */
+    private $enrolid;
+
+    /** @var string the custom instance name of the enrol instance that published this resource. */
+    private $enrolname;
+
     /**
      * The published_resource constructor.
      *
@@ -66,9 +72,11 @@ class published_resource {
      * @param bool $supportsgrades whether or not this resource supports grades.
      * @param float|null $grademax the max grade or null if this is not a graded resource.
      * @param bool $iscourse whether or not this resource is itself a course.
+     * @var int enrolid the id of the enrol instance that published this resource.
+     * @var string $enrolname the custom instance name of the enrol instance that published this resource.
      */
     public function __construct(string $name, string $coursefullname, int $courseid, int $contextid, int $id,
-            string $uuid, bool $supportsgrades, ?float $grademax, bool $iscourse) {
+            string $uuid, bool $supportsgrades, ?float $grademax, bool $iscourse, int $enrolid, string $enrolname) {
 
         $this->name = $name;
         $this->coursefullname = $coursefullname;
@@ -79,6 +87,8 @@ class published_resource {
         $this->supportsgrades = $supportsgrades;
         $this->grademax = $grademax;
         $this->iscourse = $iscourse;
+        $this->enrolid = $enrolid;
+        $this->enrolname = $enrolname;
     }
 
     /**
@@ -160,5 +170,23 @@ class published_resource {
      */
     public function is_course(): bool {
         return $this->iscourse;
+    }
+
+    /**
+     * Get the enrolment id for this resource.
+     *
+     * @return int the id of the enrol instance.
+     */
+    public function get_enrol_id(): int {
+        return $this->enrolid;
+    }
+
+    /**
+     * Get the enrolment custom instance name for this resource.
+     *
+     * @return string the enrolment custom instance name.
+     */
+    public function get_enrol_name(): string {
+        return $this->enrolname;
     }
 }
