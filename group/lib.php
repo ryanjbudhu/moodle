@@ -1211,7 +1211,8 @@ function groups_sync_with_enrolment($enrolname, $courseid = 0, $gidfield = 'cust
               JOIN {groups} g ON (g.id = gm.groupid)
               JOIN {enrol} e ON (e.enrol = :enrolname AND e.courseid = g.courseid $onecourse)
               JOIN {user_enrolments} ue ON (ue.userid = gm.userid AND ue.enrolid = e.id)
-             WHERE gm.component=:component AND gm.itemid = e.id AND g.id <> e.{$gidfield}";
+             WHERE gm.component=:component AND gm.itemid = e.id 
+             AND g.id <> e.{$gidfield} AND e.{$gidfield} > 0";
 
     $rs = $DB->get_recordset_sql($sql, $params);
     foreach ($rs as $gm) {
