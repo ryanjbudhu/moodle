@@ -348,6 +348,19 @@ function enrol_meta_sync($courseid = NULL, $verbose = false) {
         $meta->enrol_user($instance, $ue->userid, null, $ue->timestart, $ue->timeend, $ue->status);
         if ($instance->customint2 && $group = $DB->get_record('groups', ['id' => $instance->customint2])) {
             groups_add_member($group, $ue->userid, 'enrol_meta', $instance->id);
+        } else if ($instance->customint2 && $instance->customint2 == ENROL_META_COPY_GROUP) {
+            // Copy the groups of the user in the source course, and add them to the groups in the meta course
+            $groups = groups_get_user_groups($instance->customint1, $ue->userid);
+            foreach($groups[0] as $groupid => $group) {
+                $newgroupid = groups_get_group_by_name($instance->courseid, $group->name);
+                if (!$newgroupid) {
+                    $groupdata = new stdClass();
+                    $groupdata->courseid = $courseid;
+                    $groupdata->name = $group->name;
+                    $newgroupid = groups_create_group($groupdata);
+                }
+                groups_add_member($newgroupid, $ue->userid, 'enrol_meta', $instance->id);
+            }
         }
         if ($verbose) {
             mtrace("  enrolling: $ue->userid ==> $instance->courseid");
@@ -616,7 +629,7 @@ function enrol_meta_sync($courseid = NULL, $verbose = false) {
     }
 
     // Finally sync groups.
-    $affectedusers = groups_sync_with_enrolment('meta', $courseid);
+    $affectedusers = array_merge(groups_sync_with_enrolment('meta', $courseid), enrol_meta_sync_groups_with_enrolment($courseid));
     if ($verbose) {
         foreach ($affectedusers['removed'] as $gm) {
             mtrace("removing user from group: $gm->userid ==> $gm->courseid - $gm->groupname", 1);
@@ -663,4 +676,119 @@ function enrol_meta_create_new_group($courseid, $linkedcourseid) {
     $groupid = groups_create_group($groupdata);
 
     return $groupid;
+}
+
+/**
+ * Synchronises meta enrolments with the group membership.
+ *
+ * Designed for enrol_meta instances that are set to copy group membership between the source
+ * course and the target course.
+ * 
+ * Removes users from groups in the target course when not in that group in the source course.
+ * Adds users to groups (and creates new groups with the same name when necessary) in the target
+ * course when they aren't yet part of that group.
+ *
+ * @param int $courseid target course id where sync needs to be performed (0 for all courses)
+ * @return array Returns the lists with keys {removed, added} of modified users. Each record
+ *               contains fields: {userid, enrolid, courseid, groupid, groupname}
+ */
+function enrol_meta_sync_groups_with_enrolment($courseid = 0) {
+    global $DB;
+    $onecourse = $courseid ? "AND e.courseid = :courseid" : "";
+    $params = array(
+        'enrolname' => 'meta',
+        'enrolname2' => 'meta',
+        'component' => 'enrol_meta',
+        'courseid' => $courseid
+    );
+
+    $affectedusers = array(
+        'removed' => array(),
+        'added' => array()
+    );
+
+    // Remove invalid.
+    // This SQL does a few things:
+    //
+    // Virtual table "tgt" is the list of user group memberships that exist in the target course(s).
+    //   - Only get the memberships for courses with enrollments set to copy groups (customint2 == -2)
+    //   - Also the group membership component field must equal "enrol_meta" so we don't remove manually
+    //     added groups.
+    // Virtual table "src" is the list of user group memberships that exist in the source course(s).
+    //
+    // It then gets the list of user-group memberships that only exist in the target course(s).
+    $sql = "SELECT tgt.* FROM (
+                SELECT ue.userid, e.courseid, ue.enrolid, g.id AS groupid, g.name AS groupname
+                FROM {user_enrolments} ue
+                JOIN {enrol} e ON (e.id = ue.enrolid AND e.enrol = :enrolname $onecourse)
+                JOIN {groups} g ON (e.courseid = g.courseid)
+                JOIN {user} u ON (u.id = ue.userid AND u.deleted = 0)
+                LEFT JOIN {groups_members} gm ON (gm.groupid = g.id AND gm.userid = ue.userid)
+                WHERE gm.component=:component AND e.customint2 = -2 AND gm.groupid IS NOT NULL ) AS tgt
+            LEFT OUTER JOIN (
+                SELECT ue.userid, e.courseid, g.id AS groupid, g.name AS groupname
+                FROM {user_enrolments} ue
+                JOIN {enrol} e ON (e.id = ue.enrolid AND e.enrol = :enrolname2)
+                JOIN {groups} g ON (e.customint1 = g.courseid)
+                JOIN {user} u ON (u.id = ue.userid AND u.deleted = 0)
+                LEFT JOIN {groups_members} gm ON (gm.groupid = g.id AND gm.userid = ue.userid)
+                WHERE gm.groupid IS NOT NULL ) AS src
+            ON src.userid = tgt.userid AND src.courseid = tgt.courseid AND src.groupname = tgt.groupname
+            WHERE src.userid IS NULL";
+
+    $rs = $DB->get_recordset_sql($sql, $params);
+    foreach ($rs as $gm) {
+        mtrace("Removing user $gm->userid from group $gm->groupid");
+        groups_remove_member($gm->groupid, $gm->userid);
+        $affectedusers['removed'][] = $gm;
+    }
+    $rs->close();
+
+    // Add missing.
+    // This SQL does a few things:
+    //
+    // Virtual table "src" is the list of user group memberships that exist in the source course(s).
+    //   - Only get the memberships for courses with enrollments set to copy groups (customint2 == -2)
+    // Virtual table "tgt" is the list of user group memberships that exist in the target course(s).
+    //
+    // It then gets the list of user-group memberships that only exist in the source course(s).
+    $sql = "SELECT src.enrolid, src.userid, src.courseid, src.groupname, tgt.groupid, tgt.memberid FROM (
+                SELECT ue.userid, e.courseid, ue.enrolid AS enrolid, g.name AS groupname
+                FROM {user_enrolments} ue
+                JOIN {enrol} e ON (e.id = ue.enrolid AND e.enrol = :enrolname $onecourse)
+                JOIN {groups} g ON (e.customint1 = g.courseid)
+                JOIN {user} u ON (u.id = ue.userid AND u.deleted = 0)
+                LEFT JOIN {groups_members} gm ON (gm.groupid = g.id AND gm.userid = ue.userid)
+                WHERE gm.groupid IS NOT NULL AND e.customint2 = -2) AS src
+            LEFT OUTER JOIN (
+                SELECT ue.userid, e.courseid, g.id AS groupid, g.name AS groupname, gm.id as memberid
+                FROM {user_enrolments} ue
+                JOIN {enrol} e ON (e.id = ue.enrolid AND e.enrol = :enrolname2)
+                JOIN {groups} g ON (e.courseid = g.courseid)
+                JOIN {user} u ON (u.id = ue.userid AND u.deleted = 0)
+                LEFT JOIN {groups_members} gm ON (gm.groupid = g.id AND gm.userid = ue.userid)
+            ) AS tgt
+            ON src.userid = tgt.userid AND src.groupname = tgt.groupname AND src.courseid = tgt.courseid
+            WHERE tgt.memberid IS NULL";
+
+    $rs = $DB->get_recordset_sql($sql, $params);
+    $groups = [];
+    foreach ($rs as $ue) {
+        if ($ue->groupid == NULL && !isset($groups[$ue->groupname])) {
+            $groupdata = new stdClass();
+            $groupdata->courseid = $ue->courseid;
+            $groupdata->name = $ue->groupname;
+            $ue->groupid = groups_create_group($groupdata);
+            mtrace("Group $ue->groupid created, named '$ue->groupname'");
+        } else if (isset($groups[$ue->groupname])) {
+            $ue->groupid = $groups[$ue->groupname];
+        }
+        $groups[$ue->groupname] = $ue->groupid;
+        mtrace("Adding user $ue->userid to group $ue->groupid");
+        groups_add_member($ue->groupid, $ue->userid, 'enrol_meta', $ue->enrolid);
+        $affectedusers['added'][] = $ue;
+    }
+    $rs->close();
+
+    return $affectedusers;
 }

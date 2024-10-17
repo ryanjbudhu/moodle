@@ -30,6 +30,11 @@ defined('MOODLE_INTERNAL') || die();
 define('ENROL_META_CREATE_GROUP', -1);
 
 /**
+ * ENROL_META_COPY_GROUP constant for copying the group(s) from the source course to a meta course.
+ */
+define('ENROL_META_COPY_GROUP', -2);
+
+/**
  * Meta course enrolment plugin.
  * @author Petr Skoda
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -275,7 +280,9 @@ class enrol_meta_plugin extends enrol_plugin {
         $courseid = $coursecontext->instanceid;
         if (has_capability('moodle/course:managegroups', $coursecontext)) {
             $groups[ENROL_META_CREATE_GROUP] = get_string('creategroup', 'enrol_meta');
+            $groups[ENROL_META_COPY_GROUP] = get_string('copygroups', 'enrol_meta');
         }
+        $groups[ENROL_META_COPY_GROUP] = get_string('copygroups', 'enrol_meta');
         foreach (groups_get_all_groups($courseid) as $group) {
             $groups[$group->id] = format_string($group->name, true, array('context' => $coursecontext));
         }

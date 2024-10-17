@@ -45,3 +45,4 @@ $string['wscannotcreategroup'] = 'No permission to create group in linked course
 $string['wsinvalidcourse'] = 'Course id = {$a} does not exist or no permission to link in meta enrolment.';
 $string['wsinvalidmetacourse'] = 'Meta course id = {$a} does not exist or no permission to add enrolment instance.';
 $string['wsnoinstancesspecified'] = 'No instances specified';
+$string['copygroups'] = 'Copy source course groups';
